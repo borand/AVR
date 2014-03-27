@@ -164,6 +164,8 @@ int main(void)
 	CmdLineLoop();
 	return 0;
 }
+
+
 void CmdLineLoop(void)
 {
 	u08 c;

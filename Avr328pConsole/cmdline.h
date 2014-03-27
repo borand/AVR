@@ -84,6 +84,7 @@
 // constants/macros/typdefs
 typedef void (*CmdlineFuncPtrType)(void);
 
+
 // functions
 
 //! initalize the command line system
@@ -111,6 +112,9 @@ void cmdlineProcessInputString(void);
 void cmdlinePrintPrompt(void);
 void cmdlinePrintError(void);
 
+void cmdlineIncrementPrompt(void);
+void cmdlinePrintPromptEnd(void);
+
 // argument retrieval commands
 //! returns a string pointer to argument number [argnum] on the command line
 u08* cmdlineGetArgStr(u08 argnum);
@@ -118,6 +122,8 @@ u08* cmdlineGetArgStr(u08 argnum);
 long cmdlineGetArgInt(u08 argnum);
 //! returns the hex integer interpretation of argument number [argnum]
 long cmdlineGetArgHex(u08 argnum);
+
+
 
 #endif
 //@}

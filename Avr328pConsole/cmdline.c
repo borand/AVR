@@ -28,6 +28,7 @@
 
 #include "global.h"		// include our global settings
 #include "cmdline.h"
+#include "rprintf.h"
 
 // include project-specific configuration
 // #include "cmdlineconf.h"
@@ -56,6 +57,8 @@
 u08 PROGMEM CmdlinePrompt[] = "cmd>";
 u08 PROGMEM CmdlineNotice[] = "cmdline: ";
 u08 PROGMEM CmdlineCmdNotFound[] = "command not found";
+
+static long cmd_prompt_index;
 
 // command list
 // -commands are null-terminated strings
@@ -88,6 +91,7 @@ void cmdlineInit(void)
 	CmdlineExecFunction = 0;
 	// initialize command list
 	CmdlineNumCommands = 0;
+	cmd_prompt_index = 0;
 }
 
 void cmdlineAddCommand(u08* newCmdString, CmdlineFuncPtrType newCmdFuncPtr)
@@ -221,8 +225,14 @@ void cmdlineInputFunc(unsigned char c)
 	{
 		// user pressed [ENTER]
 		// echo CR and LF to terminal
+
+		//rprintf(""",""res"":");
+		//rprintf(",");
+
 		cmdlineOutputFunc(ASCII_CR);
 		cmdlineOutputFunc(ASCII_LF);
+
+
 		// add null termination to command
 		CmdlineBuffer[CmdlineBufferLength++] = 0;
 		CmdlineBufferEditPos++;
@@ -379,8 +389,18 @@ void cmdlineMainLoop(void)
 void cmdlinePrintPrompt(void)
 {
 	// print a new command prompt
-	u08* ptr = CmdlinePrompt;
-	while(pgm_read_byte(ptr)) cmdlineOutputFunc( pgm_read_byte(ptr++) );
+	//u08* ptr = CmdlinePrompt;
+	//while(pgm_read_byte(ptr)) cmdlineOutputFunc( pgm_read_byte(ptr++) );
+	rprintf("<%d>",cmd_prompt_index);
+}
+void cmdlineIncrementPrompt(void)
+{
+	cmd_prompt_index++;
+}
+void cmdlinePrintPromptEnd(void)
+{
+	rprintf("</%d>\r\n",cmd_prompt_index);
+	cmdlineIncrementPrompt();
 }
 
 void cmdlinePrintError(void)

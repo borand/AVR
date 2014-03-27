@@ -8,6 +8,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
+#include <util/delay.h>
 #include <string.h>
 #include "global.h"
 #include "uart.h"
@@ -16,8 +17,14 @@
 #include "cmdline.h"
 #include "a2d.h"
 #include "timer.h"
+#include "extint.h"
 
 #define DEBUG 0
+
+uint32_t ext_interupt_count_0;
+uint32_t timer1_ovf_count;
+uint32_t count_Wh;
+uint32_t count_kWh;
 
 void CmdLineLoop(void);
 void HelpFunction(void);
@@ -27,6 +34,60 @@ void test(void);
 void Poke(void);
 void Peek(void);
 void Dump(void);
+
+void ResetCounters(void);
+
+void Interrupt0(void)
+{
+	rprintfProgStrM("<json>[");
+	rprintfNum(10, 10, 0, ' ', ext_interupt_count_0);
+	rprintfProgStrM(",");
+	rprintfNum(10, 10, 0, ' ', timer1_ovf_count);
+	rprintfProgStrM(",");
+	rprintfNum(10, 10, 0, ' ', TCNT1);
+	rprintfProgStrM("]</json>\n");
+	TCNT1            = 0;
+	timer1_ovf_count = 0;
+	count_Wh  = 0;
+	count_kWh = 0;
+}
+void Interrupt1(void)
+{
+	rprintfProgStrM("Interrupt1\n");
+}
+
+void Timer1OvfFunc(void)
+{
+	timer1_ovf_count++;
+	toggle(PORTB,PB1);
+	//rprintf("TIMER1_OVF_vect %d, %d\n", timer1_ovf_count, TCNT1);
+}
+
+ISR(INT0_vect)
+{
+	ext_interupt_count_0++;
+	count_Wh++;
+	if (count_Wh == 1000)
+			{
+		count_kWh++;
+		count_Wh = 0;
+			}
+	sbi(PORTB,PB0);
+	Interrupt0();
+	_delay_ms(1);
+	toggle(PORTB,PB5);
+	cbi(PORTB,PB0);
+}
+
+ISR(INT1_vect)
+{
+	toggle(PORTB,PB5);
+	Interrupt1();
+}
+ISR(TIMER1_OVF_vect)
+{
+	Timer1OvfFunc();
+}
 
 uint8_t Run;
 
@@ -40,15 +101,38 @@ int main(void)
 	vt100Init();
 	vt100ClearScreen();
 
-	cmdlineAddCommand("help",  HelpFunction);
+	///////////////////////////////////////////////////////
+	// TIMER1
+	TIMSK1 = _BV(TOIE1);            //timer1Init();
+	TCCR1B = _BV(CS12) | _BV(CS10); //timer1SetPrescaler(TIMER_CLK_DIV1024);
+
+	ext_interupt_count_0 = 0;
+	timer1_ovf_count     = 0;
+
+	EICRA = _BV(ISC11) | _BV(ISC01);
+	EIMSK = _BV(INT1)  | _BV(INT0);
+
+	DDRB = _BV(PB0) | _BV(PB1) | _BV(PB5);
+
+	sbi(PORTB,PB5);
+	cbi(DDRD,PB2);
+	cbi(DDRD,PB3);
+	sbi(PORTD,PB2);
+	sbi(PORTD,PB3);
+
+	cmdlineAddCommand("help", HelpFunction);
 	cmdlineAddCommand("poke", Poke);
 	cmdlineAddCommand("peek", Peek);
 	cmdlineAddCommand("dump", Dump);
 	cmdlineAddCommand("test", test);
+	cmdlineAddCommand("idn",  GetVersion);
+
+
+	cmdlineAddCommand("reset", ResetCounters);
 
 	GetVersion();
-
 	cmdlineInputFunc('\r');
+
 	CmdLineLoop();
 	return 0;
 }
@@ -64,19 +148,7 @@ void CmdLineLoop(void)
 		// into the cmdline processor
 		while (uartReceiveByte(&c))
 		{
-			switch(c)
-			{
-				case 'H':
-					HelpFunction();
-					cmdlineInputFunc('\r');
-					break;
-				case 'I':
-					GetVersion();
-					cmdlineInputFunc('\r');
-					break;
-				default:
-					cmdlineInputFunc(c);
-			}
+			cmdlineInputFunc(c);
 		}
 		// run the cmdline execution functions
 		cmdlineMainLoop();
@@ -95,8 +167,10 @@ void HelpFunction(void)
 }
 void GetVersion(void)
 {
-	rprintfProgStrM("Avr328pConsole 328P DAQ V13.05.10, By Andrzej Borowiec");
+	rprintfProgStrM("""Avr328pConsole 328P DAQ V14.03.24, By Andrzej Borowiec""");
+	cmdlinePrintPromptEnd();
 }
+
 
 ////////////////////////////////////////////////////////////////
 //Testing and utility functions
@@ -166,7 +240,14 @@ void Dump(void) {
 			col = 0;
 		}
 	}
-
 	rprintf("\r\n");
 
+}
+//////////////////////////////////////////
+void ResetCounters(void)
+{
+	ext_interupt_count_0 = 0;
+	TCNT1                = 0;
+	timer1_ovf_count     = 0;
+	rprintfProgStrM("<reset></reset>");
 }

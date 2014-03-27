@@ -506,12 +506,12 @@ ISR(TIMER0_OVF_vect)
 }
 
 //! Interrupt handler for tcnt1 overflow interrupt
-ISR(TIMER1_OVF_vect)
-{
-	// if a user function is defined, execute it
-	if(TimerIntFunc[TIMER1OVERFLOW_INT])
-		TimerIntFunc[TIMER1OVERFLOW_INT]();
-}
+//ISR(TIMER1_OVF_vect)
+//{
+//	// if a user function is defined, execute it
+//	if(TimerIntFunc[TIMER1OVERFLOW_INT])
+//		TimerIntFunc[TIMER1OVERFLOW_INT]();
+//}
 
 #ifdef TCNT2	// support timer2 only if it exists
 //! Interrupt handler for tcnt2 overflow interrupt
